@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>直売所 売上計算帳</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FDF6E3;
+    --card: #FAF7F0;
+    --green: #5C8A4A;
+    --green-light: #E8F0E4;
+    --brown: #A0522D;
+    --brown-light: #F5EDE3;
+    --ink: #2C2C2C;
+    --ink-soft: #6B5B4E;
+    --gold: #C8960C;
+    --border: #D9CCBA;
+    --red: #C0392B;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  h1 {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1.5rem;
+    color: var(--brown);
+    text-align: center;
+    padding: 20px 0 4px;
+    letter-spacing: 0.08em;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+    margin-bottom: 24px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: var(--border);
+    border-radius: 10px;
+    padding: 4px;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 4px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ink-soft);
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 700;
+  }
+  .tab.active {
+    background: var(--card);
+    color: var(--brown);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* --- お財布カード --- */
+  .wallet-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(160,82,45,0.07);
+  }
+  .wallet-title {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--brown);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .wallet-title .icon { font-size: 1.2rem; }
+
+  /* 紙幣・硬貨グリッド */
+  .money-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .money-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 80px;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+  }
+  .money-label {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+  .money-label.bill { color: #2563A8; }
+  .money-label.coin { color: var(--ink-soft); }
+
+  .money-input {
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 1rem;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    background: white;
+    text-align: right;
+    color: var(--ink);
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .money-input:focus {
+    outline: none;
+    border-color: var(--green);
+    background: #f0f7ed;
+  }
+
+  .money-subtotal {
+    font-size: 0.88rem;
+    text-align: right;
+    color: var(--ink-soft);
+    font-weight: 700;
+  }
+
+  .wallet-total {
+    margin-top: 12px;
+    text-align: right;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--green);
+    padding-top: 10px;
+    border-top: 2px dashed var(--border);
+  }
+  .wallet-total span {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    margin-right: 6px;
+  }
+
+  /* 直接入力 */
+  .direct-input-section {
+    margin-top: 10px;
+    padding: 12px;
+    background: var(--brown-light);
+    border-radius: 10px;
+    border: 1px dashed var(--brown);
+  }
+  .direct-label {
+    font-size: 0.82rem;
+    color: var(--brown);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .direct-input {
+    width: 100%;
+    border: 1.5px solid var(--brown);
+    border-radius: 7px;
+    padding: 9px 12px;
+    font-size: 1.1rem;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    text-align: right;
+    background: white;
+    color: var(--ink);
+  }
+  .direct-input:focus { outline: none; border-color: var(--gold); }
+
+  /* 結果カード */
+  .result-card {
+    background: var(--green);
+    border-radius: 14px;
+    padding: 20px 18px;
+    margin-bottom: 16px;
+    color: white;
+    box-shadow: 0 3px 12px rgba(92,138,74,0.3);
+  }
+  .result-card .label {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    margin-bottom: 4px;
+  }
+  .result-card .amount {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .result-card .note {
+    font-size: 0.78rem;
+    opacity: 0.75;
+    margin-top: 4px;
+  }
+
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+  }
+  .result-row:last-of-type { border-bottom: none; }
+  .result-row .r-label { font-size: 0.88rem; opacity: 0.88; }
+  .result-row .r-val {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  /* ボタン */
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s;
+    margin-bottom: 10px;
+    letter-spacing: 0.04em;
+  }
+  .btn-primary {
+    background: var(--brown);
+    color: white;
+    box-shadow: 0 2px 8px rgba(160,82,45,0.3);
+  }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-green {
+    background: var(--green);
+    color: white;
+    box-shadow: 0 2px 8px rgba(92,138,74,0.3);
+  }
+  .btn-green:active { transform: scale(0.97); }
+  .btn-outline {
+    background: transparent;
+    border: 1.5px solid var(--border);
+    color: var(--ink-soft);
+  }
+  .btn-copy {
+    background: var(--gold);
+    color: white;
+    box-shadow: 0 2px 8px rgba(200,150,12,0.3);
+  }
+
+  /* 記録一覧 */
+  .record-list {
+    margin-top: 4px;
+  }
+  .record-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 14px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .record-date {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .record-amount {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--green);
+    font-family: 'Noto Serif JP', serif;
+  }
+  .record-detail {
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    margin-top: 3px;
+  }
+  .record-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .record-btn {
+    flex: 1;
+    padding: 7px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .record-btn-copy { background: var(--gold); color: white; }
+  .record-btn-del { background: #fde8e8; color: var(--red); }
+
+  .empty-msg {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    padding: 40px 0;
+  }
+
+  /* トースト */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink);
+    color: white;
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    transition: transform 0.3s;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .section-sep {
+    border: none;
+    border-top: 2px dashed var(--border);
+    margin: 18px 0;
+  }
+
+  .use-direct-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--brown);
+    font-weight: 700;
+  }
+  .use-direct-toggle input { width: 18px; height: 18px; accent-color: var(--brown); }
+
+  .date-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .date-input-row label {
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .date-input {
+    flex: 1;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 10px;
+    font-size: 0.95rem;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    background: white;
+    color: var(--ink);
+  }
+  .date-input:focus { outline: none; border-color: var(--green); }
+</style>
+<link rel="apple-touch-icon" href="./icon.png">
+</head>
+<body>
+
+<h1>🌾 直売所 売上計算帳</h1>
+<p class="subtitle">お釣り用の現金から今日の売上をパッと計算</p>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('calc')">計算する</button>
+  <button class="tab" onclick="switchTab('records')">記録一覧</button>
+</div>
+
+<!-- ===== 計算タブ ===== -->
+<div id="tab-calc" class="section active">
+
+  <!-- 持っていった金額 -->
+  <div class="wallet-card">
+    <div class="wallet-title"><span class="icon">💰</span>出発前に持っていった金額</div>
+    <div class="money-grid" id="before-grid"></div>
+    <hr class="section-sep">
+    <label class="use-direct-toggle">
+      <input type="checkbox" id="before-direct-check" onchange="toggleDirect('before')">
+      合計額を直接入力する
+    </label>
+    <div id="before-direct-wrap" style="display:none;">
+      <div class="direct-label">合計額（円）</div>
+      <input type="number" class="direct-input" id="before-direct" placeholder="例：50000" min="0" oninput="calcResult()">
+    </div>
+    <div class="wallet-total" id="before-total"><span>合計</span>¥0</div>
+  </div>
+
+  <!-- 終了後残った金額 -->
+  <div class="wallet-card">
+    <div class="wallet-title"><span class="icon">🪙</span>販売終了後に残った金額</div>
+    <div class="money-grid" id="after-grid"></div>
+    <hr class="section-sep">
+    <label class="use-direct-toggle">
+      <input type="checkbox" id="after-direct-check" onchange="toggleDirect('after')">
+      合計額を直接入力する
+    </label>
+    <div id="after-direct-wrap" style="display:none;">
+      <div class="direct-label">合計額（円）</div>
+      <input type="number" class="direct-input" id="after-direct" placeholder="例：12000" min="0" oninput="calcResult()">
+    </div>
+    <div class="wallet-total" id="after-total"><span>合計</span>¥0</div>
+  </div>
+
+  <!-- 結果 -->
+  <div class="result-card">
+    <div class="result-row">
+      <span class="r-label">持出額</span>
+      <span class="r-val" id="res-before">¥0</span>
+    </div>
+    <div class="result-row">
+      <span class="r-label">残額</span>
+      <span class="r-val" id="res-after">¥0</span>
+    </div>
+    <div style="margin-top:12px;">
+      <div class="label">本日の売上</div>
+      <div class="amount" id="res-sales">¥0</div>
+      <div class="note" id="res-note">持出額 − 残額 = 売上</div>
+    </div>
+  </div>
+
+  <!-- 日付 -->
+  <div class="date-input-row">
+    <label>📅 日付</label>
+    <input type="date" class="date-input" id="sale-date">
+  </div>
+
+  <!-- ボタン -->
+  <button class="btn btn-primary" onclick="saveRecord()">💾 この売上を記録する</button>
+  <button class="btn btn-copy" onclick="copyResult()">📋 結果をコピー</button>
+  <button class="btn btn-outline" onclick="resetAll()">↺ 全てリセット</button>
+
+</div>
+
+<!-- ===== 記録一覧タブ ===== -->
+<div id="tab-records" class="section">
+  <button class="btn btn-copy" onclick="copyAllRecords()" style="margin-bottom:16px;">📋 全記録をコピー</button>
+  <div class="record-list" id="record-list"></div>
+</div>
+
+<!-- トースト -->
+<div class="toast" id="toast"></div>
+
+<script>
+// 紙幣・硬貨定義
+const denominations = [
+  { label: '1万円札', value: 10000, type: 'bill' },
+  { label: '5千円札', value: 5000,  type: 'bill' },
+  { label: '千円札',  value: 1000,  type: 'bill' },
+  { label: '500円',   value: 500,   type: 'coin' },
+  { label: '100円',   value: 100,   type: 'coin' },
+  { label: '50円',    value: 50,    type: 'coin' },
+  { label: '10円',    value: 10,    type: 'coin' },
+];
+
+function buildGrid(gridId, prefix) {
+  const grid = document.getElementById(gridId);
+  grid.innerHTML = '';
+  denominations.forEach(d => {
+    const row = document.createElement('div');
+    row.className = 'money-row';
+    row.innerHTML = `
+      <span class="money-label ${d.type}">${d.label}</span>
+      <input type="number" class="money-input" id="${prefix}-${d.value}"
+        placeholder="0" min="0" oninput="calcTotal('${prefix}')">
+      <span class="money-subtotal" id="${prefix}-sub-${d.value}">¥0</span>
+    `;
+    grid.appendChild(row);
+  });
+}
+
+function calcTotal(prefix) {
+  let total = 0;
+  denominations.forEach(d => {
+    const el = document.getElementById(`${prefix}-${d.value}`);
+    const cnt = parseInt(el.value) || 0;
+    const sub = cnt * d.value;
+    document.getElementById(`${prefix}-sub-${d.value}`).textContent = sub > 0 ? `¥${sub.toLocaleString()}` : '¥0';
+    total += sub;
+  });
+  const directCheck = document.getElementById(`${prefix}-direct-check`).checked;
+  if (!directCheck) {
+    document.getElementById(`${prefix}-total`).innerHTML = `<span>合計</span>¥${total.toLocaleString()}`;
+  }
+  calcResult();
+  return total;
+}
+
+function toggleDirect(prefix) {
+  const checked = document.getElementById(`${prefix}-direct-check`).checked;
+  document.getElementById(`${prefix}-direct-wrap`).style.display = checked ? 'block' : 'none';
+  calcResult();
+}
+
+function getTotal(prefix) {
+  const checked = document.getElementById(`${prefix}-direct-check`).checked;
+  if (checked) {
+    const v = parseInt(document.getElementById(`${prefix}-direct`).value) || 0;
+    document.getElementById(`${prefix}-total`).innerHTML = `<span>合計</span>¥${v.toLocaleString()}`;
+    return v;
+  }
+  let total = 0;
+  denominations.forEach(d => {
+    const el = document.getElementById(`${prefix}-${d.value}`);
+    total += (parseInt(el.value) || 0) * d.value;
+  });
+  return total;
+}
+
+function calcResult() {
+  const before = getTotal('before');
+  const after  = getTotal('after');
+  const sales  = before - after;
+  document.getElementById('res-before').textContent = `¥${before.toLocaleString()}`;
+  document.getElementById('res-after').textContent  = `¥${after.toLocaleString()}`;
+  document.getElementById('res-sales').textContent  = sales >= 0
+    ? `¥${sales.toLocaleString()}`
+    : `−¥${Math.abs(sales).toLocaleString()}`;
+  document.getElementById('res-note').textContent = `¥${before.toLocaleString()} − ¥${after.toLocaleString()} = 売上`;
+}
+
+function setTodayDate() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('sale-date').value =
+    `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function getDateLabel() {
+  const v = document.getElementById('sale-date').value;
+  if (!v) return '日付未設定';
+  const [y,m,d] = v.split('-');
+  return `${y}年${m}月${d}日`;
+}
+
+function saveRecord() {
+  const before = getTotal('before');
+  const after  = getTotal('after');
+  const sales  = before - after;
+  const date   = getDateLabel();
+  const records = loadRecords();
+  records.unshift({ date, before, after, sales, id: Date.now() });
+  localStorage.setItem('chokubaijo_records', JSON.stringify(records));
+  showToast('✅ 売上を記録しました');
+  renderRecords();
+}
+
+function loadRecords() {
+  try { return JSON.parse(localStorage.getItem('chokubaijo_records')) || []; }
+  catch { return []; }
+}
+
+function renderRecords() {
+  const list = document.getElementById('record-list');
+  const records = loadRecords();
+  if (records.length === 0) {
+    list.innerHTML = '<p class="empty-msg">📭 まだ記録がありません</p>';
+    return;
+  }
+  list.innerHTML = records.map(r => `
+    <div class="record-item" id="rec-${r.id}">
+      <div class="record-date">📅 ${r.date}</div>
+      <div class="record-amount">¥${r.sales.toLocaleString()}</div>
+      <div class="record-detail">持出：¥${r.before.toLocaleString()} ／ 残：¥${r.after.toLocaleString()}</div>
+      <div class="record-actions">
+        <button class="record-btn record-btn-copy" onclick="copyRecord(${r.id})">📋 コピー</button>
+        <button class="record-btn record-btn-del" onclick="deleteRecord(${r.id})">🗑 削除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function copyRecord(id) {
+  const records = loadRecords();
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  const text = `${r.date}　売上：¥${r.sales.toLocaleString()}`;
+  copyText(text);
+  showToast('📋 コピーしました');
+}
+
+function deleteRecord(id) {
+  let records = loadRecords();
+  records = records.filter(r => r.id !== id);
+  localStorage.setItem('chokubaijo_records', JSON.stringify(records));
+  renderRecords();
+  showToast('🗑 削除しました');
+}
+
+function copyAllRecords() {
+  const records = loadRecords();
+  if (records.length === 0) { showToast('記録がありません'); return; }
+  const lines = records.map(r => `${r.date}　売上：¥${r.sales.toLocaleString()}`);
+  copyText(lines.join('\n'));
+  showToast('📋 全記録をコピーしました');
+}
+
+function copyResult() {
+  const before = getTotal('before');
+  const after  = getTotal('after');
+  const sales  = before - after;
+  const date   = getDateLabel();
+  const text = `${date}　売上：¥${sales.toLocaleString()}`;
+  copyText(text);
+  showToast('📋 コピーしました');
+}
+
+function copyText(text) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text) {
+  const el = document.createElement('textarea');
+  el.value = text;
+  el.style.position = 'fixed'; el.style.opacity = '0';
+  document.body.appendChild(el);
+  el.select(); document.execCommand('copy');
+  document.body.removeChild(el);
+}
+
+function resetAll() {
+  denominations.forEach(d => {
+    document.getElementById(`before-${d.value}`).value = '';
+    document.getElementById(`after-${d.value}`).value  = '';
+    document.getElementById(`before-sub-${d.value}`).textContent = '¥0';
+    document.getElementById(`after-sub-${d.value}`).textContent  = '¥0';
+  });
+  ['before','after'].forEach(p => {
+    document.getElementById(`${p}-direct`).value = '';
+    document.getElementById(`${p}-direct-check`).checked = false;
+    document.getElementById(`${p}-direct-wrap`).style.display = 'none';
+    document.getElementById(`${p}-total`).innerHTML = '<span>合計</span>¥0';
+  });
+  calcResult();
+  showToast('↺ リセットしました');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  event.target.classList.add('active');
+  if (tab === 'records') renderRecords();
+}
+
+// 初期化
+buildGrid('before-grid', 'before');
+buildGrid('after-grid', 'after');
+setTodayDate();
+calcResult();
+</script>
+
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    regs.forEach(r=>r.unregister());
+  }).then(()=>{
+    navigator.serviceWorker.register('./sw.js');
+  });
+}
+</script>
+</body>
+</html>
